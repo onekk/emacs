@@ -2,6 +2,8 @@
 
 A template system derived from and old code found on EmacsWiki, modified to be lean and quick.
 
+The file is less than 300 lines including the long docstring that Emacs require.
+
 ## Install
 You simply add these lines in your *emacs.el* or preferred init file:
 
