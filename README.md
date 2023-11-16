@@ -1,1 +1,22 @@
-# emacs git init git add README.md git commit -m first commit git branch -M main git remote add origin https://github.com/onekk/emacs.git git push -u origin main
+# emacs
+
+This repo is made to hold emacs stuffs.
+
+
+- [okk-tmpl](https://github.com/onekk/emacs/okk-tmpl/README.md).
+
+## Donations
+
+
+>
+> **If you have found useful this site please donate using:**
+>
+> [Link Paypal.me](https://paypal.me/FCSguidait?locale.x=en_EN)
+>
+> Donations will be used to extend the site with new things.
+
+
+## Blog
+
+
+[Blog link](http://onekk-maker.blogspot.com/)
