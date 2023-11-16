@@ -3,7 +3,7 @@
 This repo is made to hold emacs stuffs.
 
 
-- [okk-tmpl](https://github.com/onekk/emacs/okk-tmpl/README.md).
+- [okk-tmpl](https://github.com/onekk/emacs/blob/main/okk-tmpl/README.md).
 
 ## Donations
 
