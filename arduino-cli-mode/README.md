@@ -10,10 +10,15 @@ The commands that originally require multiple steps (such as first
 searching for a library and then separately installing it) have
 been folded into one.
 
+It is an improved version of [arduino-cli-mode][https://github.com/motform/arduino-cli-mode]with some added features:
+
+- it is not a minor mode
+- it has the ability to set the `arduino-cli` executable path if emacs is not able to find it.
+
 
 ## Installation
 
-A sample configuration with *use-package* could look like this:
+A sample configuration with **use-package** could look like this:
 
 ```elisp
 (use-package arduino-cli-mode
@@ -50,14 +55,13 @@ variable that permit to specify a different executable name (just in case) or mo
 common to specify the whole path (`expand-file-name` will take care of this) of the
 executable in case emacs is complaining about not finding it. Sometimes emacs is started wiht  
 
-These can of course be set global via
-your `init`, but have found them to be an excellent fit for [dir](https://www.gnu.org/software/emacs/manual/html_node/elisp/Directory-Local-Variables.html) and 
+These can of course be set global via your `init`, but have found them to be an excellent fit for [dir](https://www.gnu.org/software/emacs/manual/html_node/elisp/Directory-Local-Variables.html) and 
 [file local variables](https://www.gnu.org/software/emacs/manual/html_node/elisp/File-Local-Variables.html#File-Local-Variables).
 To get the fqbn/port information for a currently connected board, use 
 `arduino-cli-board-list`.
 
-Using default board variables should be a bit faster, as it
-eliminates the need to shelling out and then parse JSON from `arduino-cli`.
+Using default board variables should be a bit faster, as it eliminates the need to
+shelling out and then parse JSON from `arduino-cli`.
 
 
 ## Customization
@@ -71,6 +75,8 @@ You can enable the major flags from `arduino-cli` using similar enumerations.
 | `arduino-cli-warnings`               | `nil` (default), `'default`, `'more`, `'all` |
 | `arduino-cli-verbosity`              | `nil` (default), `'quiet`, `'verbose`        |
 | `arduino-cli-compile-only-verbosity` | `nil`, `t` (default)                         |
+
+**Note:** flags other than `t` and `nil` have an *apostrophe* in front of them.
 
 ## Keymap
 
@@ -96,20 +102,17 @@ The following keybindings are provided out of the box.
 * Not called `elduino-mode`
 
 
-## What it is not
-
-This mode is not an Arduino major mode, it only provides convenient access to arduino-cli.
-If you are looking for something like that, check out [arduino-mode](https://github.com/stardiviner/arduino-mode/tree/23ae47c9f28f559e70b790b471f20310e163a39b).
-In fact, I think they would complement each other rather well, as `arduino-mode` lacks support 
-for `arduino-cli`, simply due to pre-dating it with a decade.
-
-If you want auto-completion for Arduino development, see [company-arduino](https://github.com/yuutayamada/company-arduino/tree/d7e369702b8eee63e6dfdeba645ce28b6dc66fb1).
-
-Depending on your board, you might also enjoy [platform-io-mode](https://github.com/ZachMassia/PlatformIO-Mode),
-an excellent wrapper that I took a lot of inspiration from while writing this one.
-
-
 ## Contribute
 
-This is my first real elisp project, so everything from code review to feature implementations are welcome!
-The plan is to support (more or less) the entire feature set of arduino-cli, and then go into maintenance mode.
+This is my first real elisp project.
+
+
+## Donations
+
+
+>
+> **If you have found useful this code please donate using:**
+>
+> [Link Paypal.me](https://paypal.me/FCSguidait?locale.x=en_EN)
+>
+> Donations will be used to maintain it and to create new things.
