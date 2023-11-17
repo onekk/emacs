@@ -10,7 +10,7 @@ The commands that originally require multiple steps (such as first
 searching for a library and then separately installing it) have
 been folded into one.
 
-It is an improved version of [arduino-cli-mode][https://github.com/motform/arduino-cli-mode]with some added features:
+It is an improved version of [arduino-cli-mode](https://github.com/motform/arduino-cli-mode) with some added features:
 
 - it is not a minor mode
 - it has the ability to set the `arduino-cli` executable path if emacs is not able to find it.
