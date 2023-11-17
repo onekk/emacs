@@ -1,15 +1,3 @@
-### NOTE
-
-It appears that recent versions of the arduino-cli (> 0.10.0) has
-changed (i.e. broken) parts of the JSON API. As such, some
-functionallity might not work on these recent versions. This is less a
-fault of the developers (which overall do a great job in pushing the
-tooling forward) and more a problem with SamVer and its normaliation
-of breakage (see [Hickey](https://www.youtube.com/watch?v=oyLBGkS5ICk)).
-I will update the mode once 1.0 hits and we have API "stability".
-
----
-
 # arduino-cli-mode
 
 `arduino-cli-mode` is an Emacs minor mode for using the excellent new 
@@ -25,31 +13,44 @@ been folded into one.
 
 ## Installation
 
-The recommended way to install `arduino-cli-mode` is through [melpa](http://melpa.org/#/arduino-cli-mode). 
-Depending on if you use [arduino-mode](https://melpa.org/#/arduino-mode) 
-or not, you might want to load `arduino-cli-mode` either as a hook or as a mode.
-A sample configuration with [use-package](https://github.com/jwiegley/use-package) could look like this:
+A sample configuration with *use-package* could look like this:
 
 ```elisp
 (use-package arduino-cli-mode
-  :ensure t
-  ;; :hook arduino-mode
-  ;; :mode "\\.ino\\'"
+  :load-path "<Location of arduino-cli-mode>"
   :custom
   (arduino-cli-warnings 'all)
-  (arduino-cli-verify t))
+  (arduino-cli-verify t)
+  (arduino-cli-default-fqbn "arduino:avr:uno")
+  (arduino-cli-defcmd (expand-file-name "< location of arduino-cli executable>"))
+  )
+  
+  (add-to-list 'auto-mode-alist '("\\.ino\\'" . arduino-cli-mode))
 ```
-
 
 ## Default boards
 
 By default `arduino-cli-mode` uses the `board list` command from
-`arduino-cli` to determine which board to target. This works well most
-of the time, but sometimes fails due to connectivity issues. It also
-requires the target board to be connected, which might not always be
-possible. To cover these use cases you are able to set a default board
-(fqbn) and port via `arduino-cli-default-fqbn` and
-`arduino-cli-default-port` respectively. These can of course be set global via
+`arduino-cli` to determine which board to target.
+
+This works well most of the time, but sometimes fails due to connectivity issues.
+It also requires the target board to be connected, which might not always be
+possible.
+
+Another use case is when developing and testing there is only the need to compile the
+executable and test if always is ok.
+
+To cover these use cases you are able to set:
+
+- a default board (fqbn) via `arduino-cli-default-fqbn` as in the example above.
+- a default port via `arduino-cli-default-port`
+
+Sample configuration presented above is showing the use of `arduino-cli-defcmd`
+variable that permit to specify a different executable name (just in case) or most
+common to specify the whole path (`expand-file-name` will take care of this) of the
+executable in case emacs is complaining about not finding it. Sometimes emacs is started wiht  
+
+These can of course be set global via
 your `init`, but have found them to be an excellent fit for [dir](https://www.gnu.org/software/emacs/manual/html_node/elisp/Directory-Local-Variables.html) and 
 [file local variables](https://www.gnu.org/software/emacs/manual/html_node/elisp/File-Local-Variables.html#File-Local-Variables).
 To get the fqbn/port information for a currently connected board, use 
@@ -71,14 +72,6 @@ You can enable the major flags from `arduino-cli` using similar enumerations.
 | `arduino-cli-verbosity`              | `nil` (default), `'quiet`, `'verbose`        |
 | `arduino-cli-compile-only-verbosity` | `nil`, `t` (default)                         |
 
-If you want to automatically enable `arduino-cli-mode` on `.ino` files, you have to get [auto-minor-mode](https://github.com/joewreschnig/auto-minor-mode).
-Once that is installed, add the following to your init:
-
-```elisp
-(add-to-list 'auto-minor-mode-alist '("\\.ino\\'" . arduino-cli-mode))
-```
-
-
 ## Keymap
 
 The default keymap prefix is `C-c C-a` and can be customized with `arduino-cli-mode-keymap-prefix`.
@@ -99,7 +92,7 @@ The following keybindings are provided out of the box.
 ## Limitations
 
 * Does not support `board attach` commands
-* Only tested on macOS (but will probably work on other Unices)
+* Only tested on Linux
 * Not called `elduino-mode`
 
 
