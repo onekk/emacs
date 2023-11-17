@@ -3,7 +3,7 @@
 ;; Original Package
 ;; Copyright © 2023
 ;; Author: Carlo Dormeletti
-;; URL: 
+;; URL: https://github.com/onekk/emacs/arduino-cli-mode
 ;; Version: 20231115
 ;; Package-Requires: ((emacs "25.1"))
 ;; Created: 2023-11-16
@@ -64,7 +64,7 @@
   "Arduino-cli-mode functions and settings."
   :group  'tools
   :prefix "arduino-cli-"
-  ;; :link   '(url-link https://github.com/motform/arduino-cli-mode)
+  :link   '(url-link https://github.com/onekk/emacs/arduino-cli-mode)
   )
 
 (defcustom arduino-cli-mode-keymap-prefix (kbd "C-c C-a")
