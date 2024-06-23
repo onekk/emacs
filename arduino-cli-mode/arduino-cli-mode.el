@@ -4,14 +4,10 @@
 ;; Copyright © 2023
 ;; Author: Carlo Dormeletti
 ;; URL: https://github.com/onekk/emacs/arduino-cli-mode
-;; Version: 20231115
+;; Version: 20240623
 ;; Package-Requires: ((emacs "25.1"))
 ;; Created: 2023-11-16
 ;; Keywords: processes tools
-
-;; Original Package: Copyright © 2019 Author: Love Lagerkvist
-;; Original URL: https://github.com/motform/arduino-cli-mode
-;; Original Version: 201001
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -33,21 +29,22 @@
 ;;; Commentary:
 
 ;; arduino-cli-mode is an Emacs minor mode for using the excellent new
-;; Arduino command line interface in an Emacs-native fashion.  The mode
-;; covers the full range of arduino-cli features in an Emacs native
-;; fashion.  The mode leverages the infinite power the GNU to provide
-;; fussy-finding of libraries and much improved support for handling
-;; multiple boards.  The commands that originally require multiple
-;; steps (such as first searching for a library and then separately
-;; installing it) have been folded into one.
-;; 
-;; For more information on the package and default board behavior,
-;; see the Original README.
+;; Arduino command line interface in an Emacs-native fashion.
 ;;
+;; It is a subset of the code at:
+;;    https://github.com/motform/arduino-cli-modes
+;;    Copyright © 2019 Author: Love Lagerkvist
+;;
+;; It is aimed mainly to compile the ino file and do some other minor
+;; things, like to list:
+;; - boards
+;; - cores
+;; - libraries
+;; 
 ;; For more information on arduino-cli itself,
 ;; see https://github.com/arduino/arduino-cli
 ;;
-;; Tested against arduino-cli >= 0.34.2
+;; Tested against arduino-cli >= 1.0.0 on Linux
 
 ;;; Code:
 
@@ -77,14 +74,8 @@
   :group 'arduino-cli
   :type  'string)
 
-
-(defcustom arduino-cli-default-fqbn nil
-  "Default fqbn to use if board selection fails."
-  :group 'arduino-cli
-  :type  'string)
-
-(defcustom arduino-cli-default-port nil
-  "Default port to use if board selection fails."
+(defcustom arduino-cli-config-file nil
+  "Default configuration file path."
   :group 'arduino-cli
   :type  'string)
 
@@ -140,8 +131,7 @@
 
 (defun arduino-cli--compile-flags ()
   "Add flags to CMD, if set."
-  (concat (arduino-cli--verify)
-          (arduino-cli--warnings)
+  (concat (arduino-cli--warnings)
           (arduino-cli--verbosity)))
 
 (defun arduino-cli--add-flags (mode cmd)
@@ -169,11 +159,6 @@
   "Return USB-DEVICE if it is an Arduino, nil otherwise."
   (assoc 'boards usb-device))
 
-(defun arduino-cli--selected-board? (board selected-board)
-  "Return BOARD if it is the SELECTED-BOARD."
-  (string= (cdr (assoc 'address board))
-           selected-board))
-
 (defun arduino-cli--cmd-json (cmd)
   "Get the result of CMD as JSON-style alist."
   (let* ((cmmd (concat arduino-cli-defcmd " " cmd " --format json")))
@@ -185,42 +170,6 @@
     (arduino-cli--?map-put arduino-cli-default-fqbn 'FQBN)
     (arduino-cli--?map-put arduino-cli-default-port 'address)))
 
-(defun arduino-cli--board ()
-  "Get connected Arduino board."
-  (let* ((usb-devices     (arduino-cli--cmd-json "board list"))
-         (boards          (seq-filter #'arduino-cli--arduino? usb-devices))
-         (boards-info     (seq-map (lambda (m) (thread-first (assoc 'boards m) cdr (seq-elt 0))) boards))
-         (informed-boards (cl-mapcar (lambda (m n) (map-merge 'list m n)) boards boards-info))
-         (selected-board  (arduino-cli--dispatch-board informed-boards))
-         (default-board   (arduino-cli--default-board)))
-    (cond (selected-board selected-board)
-          (default-board  default-board)
-          (t (error "ERROR: No board connected")))))
-
-;; TODO add automatic support for compiling to known cores when no boards are connected
-(defun arduino-cli--dispatch-board (boards)
-  "Correctly dispatch on the amount of BOARDS connected."
-  (pcase (length boards)
-    (`1           (car boards))
-    ((pred (< 1)) (arduino-cli--select-board boards))
-    (_ nil)))
-
-(defun arduino-cli--board-name (board)
-  "Get name of BOARD in (name @ port) format."
-  (concat (cdr (assoc 'name board))
-          " @ "
-          (cdr (assoc 'address board))))
-
-(defun arduino-cli--select-board (boards)
-  "Prompt user to select an Arduino from BOARDS."
-  (let* ((board-names (cl-mapcar #'arduino-cli--board-name boards))
-         (selection   (thread-first board-names
-                        (arduino-cli--select "Board ")
-                        (split-string "@")
-                        cadr
-                        string-trim)))
-    (car (seq-filter (lambda (m) (arduino-cli--selected-board? m selection)) boards))))
-
 (defun arduino-cli--cores ()
   "Get installed Arduino cores."
   (let* ((cores    (arduino-cli--cmd-json "core list"))
@@ -229,26 +178,12 @@
     (if ids ids
       (error "ERROR: No cores installed"))))
 
-(defun arduino-cli--search-cores ()
-  "Search from list of cores."
-  (let* ((cores    (arduino-cli--cmd-json "core search")) ; search without parameters gets all cores
-         (id-pairs (seq-map (lambda (m) (assoc 'ID m)) cores))
-         (ids      (seq-map #'cdr id-pairs)))
-    (arduino-cli--select ids "Core ")))
-
 (defun arduino-cli--libs ()
   "Get installed Arduino libraries."
   (let* ((libs      (arduino-cli--cmd-json "lib list"))
          (lib-names (seq-map (lambda (lib) (cdr (assoc 'name (assoc 'library lib)))) libs)))
     (if lib-names lib-names
       (error "ERROR: No libraries installed"))))
-
-(defun arduino-cli--search-libs ()
-  "Get installed Arduino libraries."
-  (let* ((libs      (cdr (assoc 'libraries (arduino-cli--cmd-json "lib search"))))
-         (lib-names (seq-map (lambda (lib) (cdr (assoc 'name lib))) libs)))
-    (if lib-names lib-names
-      (error "ERROR: Unable to find libraries"))))
 
 (defun arduino-cli--select (xs msg)
   "Select option from XS, prompted by MSG."
@@ -259,36 +194,22 @@
 (defun arduino-cli-compile ()
   "Compile Arduino project."
   (interactive)
-  (let* ((board (arduino-cli--board))
-         (fqbn  (if-let (fqbn (cdr (assoc 'FQBN board))) fqbn
-                  (error "ERROR: No fqbn specified")))
-         (cmd   (concat "compile --fqbn " fqbn)))
+  (let* (
+          (cmd (concat "compile " "")))
     (arduino-cli--compile cmd)))
 
 (defun arduino-cli-compile-and-upload ()
   "Compile and upload Arduino project."
   (interactive)
-  (let* ((board (arduino-cli--board))
-         (fqbn  (if-let (fqbn (cdr (assoc 'FQBN board)))
-                    fqbn
-                  (error "ERROR: No fqbn specified")))
-         (port  (if-let (port (cdr (assoc 'address board)))
-                    port
-                  (error "ERROR: No port specified")))
-         (cmd   (concat "compile --fqbn " fqbn " --port " port " --upload")))
+  (let* (
+         (cmd   (concat "compile " "--upload")))
     (arduino-cli--compile cmd)))
 
 (defun arduino-cli-upload ()
   "Upload Arduino project."
   (interactive)
-  (let* ((board (arduino-cli--board))
-         (fqbn  (if-let (fqbn (cdr (assoc 'FQBN board)))
-                    fqbn
-                  (error "ERROR: No fqbn specified")))
-         (port  (if-let (port (cdr (assoc 'address board)))
-                    port
-                  (error "ERROR: No port specified")))
-         (cmd (concat "upload --fqbn " fqbn " --port " port)))
+  (let* (
+         (cmd (concat "upload" "" )))
     (arduino-cli--compile cmd)))
 
 (defun arduino-cli-board-list ()
@@ -296,71 +217,20 @@
   (interactive)
   (arduino-cli--message "board list"))
 
+(defun arduino-cli-board-listall ()
+  "Show list of Arduino boards."
+  (interactive)
+  (arduino-cli--message "board listall"))
+
 (defun arduino-cli-core-list ()
   "Show list of installed Arduino cores."
   (interactive)
   (arduino-cli--message "core list"))
 
-(defun arduino-cli-core-upgrade ()
-  "Update-index and upgrade all installed Arduino cores."
-  (interactive)
-  (let* ((cores     (arduino-cli--cores))
-         (selection (arduino-cli--select cores "Core "))
-         (cmd       (concat "core upgrade " selection)))
-    (shell-command-to-string (concat arduino-cli-defcmd " core update-index"))
-    (arduino-cli--message cmd)))
-
-(defun arduino-cli-core-upgrade-all ()
-  "Update-index and upgrade all installed Arduino cores."
-  (interactive)
-  (shell-command-to-string (concat arduino-cli-defcmd " core update-index"))
-  (arduino-cli--message "core upgrade"))
-
-;; TODO change from compilation mode into other, non blocking mini-buffer display
-(defun arduino-cli-core-install ()
-  "Find and install Arduino cores."
-  (interactive)
-  (let* ((core (arduino-cli--search-cores))
-         (cmd  (concat arduino-cli-defcmd " core install " core)))
-    (shell-command-to-string (concat arduino-cli-defcmd " core update-index"))
-    (compilation-start cmd 'arduino-cli-compilation-mode)))
-
-(defun arduino-cli-core-uninstall ()
-  "Find and uninstall Arduino cores."
-  (interactive)
-  (let* ((cores     (arduino-cli--cores))
-         (selection (arduino-cli--select cores "Core "))
-         (cmd       (concat "core uninstall " selection)))
-    (arduino-cli--message cmd)))
-
 (defun arduino-cli-lib-list ()
   "Show list of installed Arduino libraries."
   (interactive)
   (arduino-cli--message "lib list"))
-
-(defun arduino-cli-lib-upgrade ()
-  "Upgrade Arduino libraries."
-  (interactive)
-  (shell-command-to-string  (concat arduino-cli-defcmd " lib update-index"))
-  (arduino-cli--message "lib upgrade"))
-
-;; TODO change from compilation mode into other, non blocking mini-buffer display
-(defun arduino-cli-lib-install ()
-  "Find and install Arduino libraries."
-  (interactive)
-  (let* ((libs (arduino-cli--search-libs))
-         (selection (arduino-cli--select libs "Library "))
-         (cmd (concat arduino-cli-def-cmd " lib install " (shell-quote-argument selection))))
-    (shell-command-to-string  (concat arduino-cli-defcmd " lib update-index"))
-    (compilation-start cmd 'arduino-cli-compilation-mode)))
-
-(defun arduino-cli-lib-uninstall ()
-  "Find and uninstall Arduino libraries."
-  (interactive)
-  (let* ((libs (arduino-cli--libs))
-         (selection (arduino-cli--select libs "Library "))
-         (cmd (concat "lib uninstall " (shell-quote-argument selection))))
-    (arduino-cli--message cmd)))
 
 (defun arduino-cli-new-sketch ()
   "Create a new Arduino sketch."
@@ -369,6 +239,27 @@
          (path (read-directory-name "Sketch path: "))
          (cmd  (concat "sketch new " name)))
     (arduino-cli--message cmd path)))
+
+;; Insert a command to create a  with a content:
+(defun arduino-cli-new-sketch-yaml ()
+  "Create a new sketch.yaml in sketch directory."
+  (interactive)
+  (let* (
+          (sketch-yaml (concat (file-name-directory buffer-file-name) "/sketch.yaml")))
+          ;;(fqbn (read-string "Board name: "))
+    (message "Writing `%s'..." sketch-yaml)
+    (with-temp-file sketch-yaml
+      (insert "# sketch.yaml \n")
+      (insert "default_fqbn: arduino:avr:uno \n")
+      (insert "# default_port: /dev/ttyACM0\n")
+      ;; (insert (format "default_profile: %s \n" (file-name-base buffer-file-name)))
+     )
+   )
+  )
+
+
+;;arduino:avr:uno
+; 
 
 (defun arduino-cli-config-init ()
   "Create a new Arduino config."
@@ -381,6 +272,11 @@
   (interactive)
   (arduino-cli--message "config dump"))
 
+(defun arduino-cli-config-edit ()
+  "Edit the current Arduino config."
+  (interactive)
+  (find-file arduino-cli-config-file))
+
 
 ;;; Minor mode
 (defvar arduino-cli-command-map
@@ -390,8 +286,6 @@
     (define-key map (kbd "u") #'arduino-cli-upload)
     (define-key map (kbd "n") #'arduino-cli-new-sketch)
     (define-key map (kbd "l") #'arduino-cli-board-list)
-    (define-key map (kbd "i") #'arduino-cli-lib-install)
-    (define-key map (kbd "u") #'arduino-cli-lib-uninstall)
     map)
   "Keymap for arduino-cli mode commands after `arduino-cli-mode-keymap-prefix'.")
 (fset 'arduino-cli-command-map arduino-cli-command-map)
@@ -405,26 +299,28 @@
 
 (easy-menu-define arduino-cli-menu arduino-cli-mode-map
   "Menu for arduino-cli."
-  '("Arduino-CLI"
-    ["New sketch" arduino-cli-new-sketch]
+  `("Arduino-CLI"
+    ("Sketch"
+      ["New sketch" arduino-cli-new-sketch]
+      ["New sketch.yaml" arduino-cli-new-sketch-yaml]
+    )
     "--"
+    ["Open Project Directory" (find-file (file-name-directory buffer-file-name))]
     ["Compile Project"            arduino-cli-compile]
     ["Upload Project"             arduino-cli-compile-and-upload]
     ["Compile and Upload Project" arduino-cli-upload]
     "--"
     ["Board list"       arduino-cli-board-list]
+    ["Board listall"    arduino-cli-board-listall]
     ["Core list"        arduino-cli-core-list]
-    ["Core install"     arduino-cli-core-install]
-    ["Core uninstall"   arduino-cli-core-uninstall]
-    ["Core upgrade"     arduino-cli-core-upgrade]
-    ["Core upgrade all" arduino-cli-core-upgrade-all]
-    "--"
     ["Library list"      arduino-cli-lib-list]
-    ["Library install"   arduino-cli-lib-install]
-    ["Library uninstall" arduino-cli-lib-uninstall]
-    "--"
-    ["Config init" arduino-cli-config-init]
-    ["Config dump" arduino-cli-config-dump]))
+    "--" 
+    ("Config"
+      ["Config init" arduino-cli-config-init]
+      ["Config dump" arduino-cli-config-dump]
+      ["Edit config" arduino-cli-config-edit]
+    )
+    ))
 
 ;;;###autoload
 (define-derived-mode arduino-cli-mode c++-mode "arduino"
