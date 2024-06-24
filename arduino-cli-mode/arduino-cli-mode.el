@@ -4,7 +4,7 @@
 ;; Copyright © 2023
 ;; Author: Carlo Dormeletti
 ;; URL: https://github.com/onekk/emacs/arduino-cli-mode
-;; Version: 20240623
+;; Version: 20240624
 ;; Package-Requires: ((emacs "25.1"))
 ;; Created: 2023-11-16
 ;; Keywords: processes tools
@@ -32,7 +32,7 @@
 ;; Arduino command line interface in an Emacs-native fashion.
 ;;
 ;; It is a subset of the code at:
-;;    https://github.com/motform/arduino-cli-modes
+;;    https://github.com/motform/arduino-cli-mode
 ;;    Copyright © 2019 Author: Love Lagerkvist
 ;;
 ;; It is aimed mainly to compile the ino file and do some other minor
@@ -66,6 +66,16 @@
 
 (defcustom arduino-cli-mode-keymap-prefix (kbd "C-c C-a")
   "Arduino-cli keymap prefix."
+  :group 'arduino-cli
+  :type  'string)
+
+(defcustom arduino-cli-default-fqbn nil
+  "Default fqbn to use if board selection fails."
+  :group 'arduino-cli
+  :type  'string)
+
+(defcustom arduino-cli-default-port nil
+  "Default port to use if board selection fails."
   :group 'arduino-cli
   :type  'string)
 
@@ -240,26 +250,26 @@
          (cmd  (concat "sketch new " name)))
     (arduino-cli--message cmd path)))
 
-;; Insert a command to create a  with a content:
 (defun arduino-cli-new-sketch-yaml ()
   "Create a new sketch.yaml in sketch directory."
   (interactive)
   (let* (
-          (sketch-yaml (concat (file-name-directory buffer-file-name) "/sketch.yaml")))
-          ;;(fqbn (read-string "Board name: "))
+          (sketch-yaml (concat (file-name-directory buffer-file-name) "/sketch.yaml"))
+          (fname (file-name-base buffer-file-name))
+          (profile (concat "default_profile: " fname " \n"))
+          (fqbn (concat "default_fqbn: " arduino-cli-default-fqbn " \n"))
+          (def_port (concat "#default_port: " arduino-cli-default-port " \n"))
+        )
     (message "Writing `%s'..." sketch-yaml)
     (with-temp-file sketch-yaml
       (insert "# sketch.yaml \n")
-      (insert "default_fqbn: arduino:avr:uno \n")
-      (insert "# default_port: /dev/ttyACM0\n")
-      ;; (insert (format "default_profile: %s \n" (file-name-base buffer-file-name)))
+      (insert "# See: https://arduino.github.io/arduino-cli/1.0/sketch-project-file/")
+      (insert fqbn)
+      (insert def_port)
+      (insert profile)
      )
    )
   )
-
-
-;;arduino:avr:uno
-; 
 
 (defun arduino-cli-config-init ()
   "Create a new Arduino config."
@@ -313,7 +323,7 @@
     ["Board list"       arduino-cli-board-list]
     ["Board listall"    arduino-cli-board-listall]
     ["Core list"        arduino-cli-core-list]
-    ["Library list"      arduino-cli-lib-list]
+    ["Library list"     arduino-cli-lib-list]
     "--" 
     ("Config"
       ["Config init" arduino-cli-config-init]
