@@ -256,14 +256,14 @@
   (let* (
           (sketch-yaml (concat (file-name-directory buffer-file-name) "/sketch.yaml"))
           (fname (file-name-base buffer-file-name))
-          (profile (concat "default_profile: " fname " \n"))
-          (fqbn (concat "default_fqbn: " arduino-cli-default-fqbn " \n"))
-          (def_port (concat "#default_port: " arduino-cli-default-port " \n"))
+          (fqbn (concat "default_fqbn: " arduino-cli-default-fqbn "\n"))
+          (def_port (concat "#default_port: " arduino-cli-default-port "\n"))
+          (profile (concat "default_profile: " fname "\n"))
         )
     (message "Writing `%s'..." sketch-yaml)
     (with-temp-file sketch-yaml
       (insert "# sketch.yaml \n")
-      (insert "# See: https://arduino.github.io/arduino-cli/1.0/sketch-project-file/")
+      (insert "# See: https://arduino.github.io/arduino-cli/1.0/sketch-project-file\n")
       (insert fqbn)
       (insert def_port)
       (insert profile)
@@ -313,6 +313,8 @@
     ("Sketch"
       ["New sketch" arduino-cli-new-sketch]
       ["New sketch.yaml" arduino-cli-new-sketch-yaml]
+      ["Edit sketch.yaml" (
+        find-file (concat (file-name-directory buffer-file-name) "sketch.yaml"))]
     )
     "--"
     ["Open Project Directory" (find-file (file-name-directory buffer-file-name))]
